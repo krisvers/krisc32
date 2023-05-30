@@ -1,0 +1,58 @@
+keywords:
+	imm: immediate
+	addr: address
+	val: value
+	rXX: register XX
+	sp/r16: stack pointer (non-general purpose r16)
+	ip/pc/r17: instruction pointer/program counter (non-general purpose r17)
+	i/o: input/output
+	mmi/o: memory mapped i/o
+	gpi/o: general purpose i/o
+	mod: modifier/selector part of instruction
+
+other details:
+	when i refer to r[X], i mean register X (for ex. r[2] is the same as r2/register 2, or r[mod] is the same as the register specified by the instruction modifier (this is of course limited to the bottom 4 bits because you should not directly access registers r16 or r17, and anything above that is not a valid register))
+	similarly when i refer to memory[X], i mean memory at address X, this time not limited to the bottom 4 bits
+	same with addr[X] and port[X]
+
+32-bit addressing
+16 general purpose 32-bit registers (r0-r15)
+32-bit stack pointer (sp/r16)
+32-bit instruction pointer (ip/r17)
+
+56-bit instructions
+	8-bit instructions/opcode
+	8-bit modifier/selector
+	32-bit value/immediate/address (also may be used as a modifer/selector, like with the ldr instruction)
+
+instuctions (8-bit instruction/opcode):
+	ldi: loads 32-bit imm into r[mod]
+	ldm: loads 32-bit word from memory[addr] into r[mod], the size is depending on the top 4 bit of mod
+		0000: an entire 32-bit word (memory[addr], memory[addr + 1], memory[addr + 2], memory[addr + 3]), 0001: 16-bits (memory[addr], memory[addr + 1]), 0010: 8-bits (memory[addr])
+	ldr: loads 32-bit word from r[value] into r[mod]
+	str: stores r[mod] into memory[addr], the size is depending on the top 4 bit of mod and only that part of the register is affected
+		0000: the full 32-bits, 0001: the bottom 16-bits, 0010: the bottom 8-bits, 0100: the top 8-bits, 0101: the top 16 bits, 1000: the second to top 8-bits, 1001: the second to bottom 8-bits
+	add: adds r[value] with r[mod], storing the output in r0
+	sub: subtracts r[value] with r[mod], storing the output in r0
+	mul: multiplies r[value] with r[mod], storing the output in r0
+	div: divides r[value] with r[mod], storing the output in r0
+	bitwise operations (decided by the top 3 bits of mod):
+		and: ands r[mod] with r[value], storing the output in r0
+		or:  ors r[mod] with r[value], storing the output in r0
+		not: inverts r[mod], storing the output in r0
+		xor: xors r[mod] with r[value], storing the output in r0
+		shl: shifts r[mod] left by r[value], storing the output in r0
+		shr: shifts r[mod] right by r[value], storing the output in r0
+		rol: rotates r[mod] left by r[value], storing the output in r0
+		ror: rotates r[mod] right by r[value], storing the output in r0
+	jump instructions (decided by the top 3 bits of mod):
+		jmp: unconditional jump to memory[r15]
+		je:  jumps to memory[r15] if r[mod] - r[value] == 0
+		jz:  jumps to memory[r15] if r[mod] == 0
+		jnz: jumps to memory[r15] if r[mod] != 0
+		jg:  jumps to memory[r15] if r[mod] > r[value]
+		jge: jumps to memory[r15] if r[mod] >= r[value]
+		jl:  jumps to memory[r15] if r[mod] < r[value]
+		jle: jumps to memory[r15] if r[mod] <= r[value]
+	in:  read from gpi/o at port[r[value]] storing the value in r[mod]
+	out: write to gpi/o at port[r[value]] with the value in r[mod]
