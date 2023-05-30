@@ -3,11 +3,11 @@
 
 #include <common.h>
 
-#define reg(x) cpu.registers[x]
-#define sp R(16)
-#define ip R(17)
+#define reg(x) cpu->registers[x]
+#define sp reg(16)
+#define ip reg(17)
 
-enum instructions {
+enum {
 	I_LDI = 0,
 	I_LDM,
 	I_LDR,
@@ -24,10 +24,16 @@ enum instructions {
 
 typedef struct cpu_t {
 	u32 registers[18];
-	u8 instruction[7];
+	u8 instruction[6];
 	u8 * memory;
 	u32 memory_size;
+	u32 mmio_start;
 	u8 gpio[0xFFFF];
 } cpu_t;
+
+typedef void (* instruction_func)(cpu_t * cpu, u8 mod, u32 value);
+
+cpu_t * cpu_new(u32 memory_size);
+u32 cpu_run(cpu_t * cpu);
 
 #endif

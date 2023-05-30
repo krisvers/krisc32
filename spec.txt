@@ -20,7 +20,7 @@ other details:
 32-bit stack pointer (sp/r16)
 32-bit instruction pointer (ip/r17)
 
-56-bit instructions
+48-bit instructions
 	8-bit instructions/opcode
 	8-bit modifier/selector
 	32-bit value/immediate/address (also may be used as a modifer/selector, like with the ldr instruction)
@@ -32,10 +32,10 @@ instuctions (8-bit instruction/opcode):
 	ldr: loads 32-bit word from r[value] into r[mod]
 	str: stores r[mod] into memory[addr], the size is depending on the top 4 bit of mod and only that part of the register is affected
 		0000: the full 32-bits, 0001: the bottom 16-bits, 0010: the bottom 8-bits, 0100: the top 8-bits, 0101: the top 16 bits, 1000: the second to top 8-bits, 1001: the second to bottom 8-bits
-	add: adds r[value] with r[mod], storing the output in r0
-	sub: subtracts r[value] with r[mod], storing the output in r0
-	mul: multiplies r[value] with r[mod], storing the output in r0
-	div: divides r[value] with r[mod], storing the output in r0
+	add: adds r[mode] with r[value], storing the output in r0
+	sub: subtracts r[mod] with r[value], storing the output in r0
+	mul: multiplies r[mod] with r[value], storing the output in r0
+	div: divides r[mod] with r[value], storing the output in r0
 	bitwise operations (decided by the top 3 bits of mod):
 		and: ands r[mod] with r[value], storing the output in r0
 		or:  ors r[mod] with r[value], storing the output in r0
