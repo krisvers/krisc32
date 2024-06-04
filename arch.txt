@@ -1,0 +1,217 @@
+arch
+    little endian
+    32 bit address space
+    32 bit registers
+    RISC
+
+    2 modes
+        system mode (default)
+        usermode
+
+registers
+    general purpose
+        - r0-r15 (0x00-0x0F)
+            16 gp 32 bit registers
+        - sp (0x10)
+            32 bit stack pointer
+    
+    system purpose (only used in system mode)
+        - sys0-sys7 (0xF0-0xF7)
+            32 bit registers used for communicating with cpu internals
+
+    protected (indirectly accessible, no direct r/w)
+        - ip
+            instruction pointer / program counter
+            set using j* jump instructions
+
+instruction types and sizes
+    - [A]: instruction with no operand = 8 bits / 1 byte
+        1 byte opcode
+
+    - [B]: instruction with register operand = 16 bits / 2 bytes
+        1 byte opcode
+        1 byte register identifier
+
+    - [C]: instruction with 2 register operands = 24 bits / 3 bytes
+        1 byte opcode
+        1 byte register identifier
+        1 byte register identifier
+
+    - [D]: instruction with 3 register operands = 32 bits / 4 bytes
+        1 byte opcode
+        1 byte register identifier
+        1 byte register identifier
+        1 byte register identifier
+
+    - [E]: instruction with register + address / imm32 operands = 48 bits / 6 bytes
+        1 byte opcode
+        1 byte register identifier
+        4 byte address / immediate
+
+    - [system]: instruction with imm8 operand = 16 bits / 2 bytes
+        1 byte opcode
+        1 byte immediate
+
+instructions
+    loading
+        - 0x01: [E] ldi(reg, imm32)
+            reg = imm32
+        - 0x02: [C] ldr(regA, regB)
+            regA = regB
+        - 0x03: [E] ldm8(reg, addr)
+            reg = memory[addr] (1 byte)
+        - 0x04: [E] ldm16(reg, addr)
+            reg = memory[addr] (2 bytes)
+        - 0x05: [E] ldm32(reg, addr)
+            reg = memory[addr] (4 bytes)
+    storing
+        - 0x06: [E] str8(reg, addr)
+            memory[addr] = reg (lowest byte)
+        - 0x07: [E] str16(reg, addr)
+            memory[addr] = reg (lowest 2 bytes)
+        - 0x08: [E] str32(reg, addr)
+            memory[addr] = reg (whole 4 bytes)
+    arithmetic
+        - 0x09: [D] add(regA, regB, regC)
+            regA = regB + regC
+        - 0x0A: [D] sub(regA, regB, regC)
+            regA = regB - regC
+        - 0x0B: [D] mul(regA, regB, regC)
+            regA = regB * regC
+        - 0x0C: [D] div(regA, regB, regC)
+            regA = regB / regC
+        - 0x0D: [D] rem(regA, regB, regC)
+            regA = regB % regC
+    bit logic
+        - 0x0E: [D] shr(regA, regB, regC)
+            regA = regB >> regC
+        - 0x0F: [D] shl(regA, regB, regC)
+            regA = regB << regC
+        - 0x10: [D] and(regA, regB, regC)
+            regA = regB & regC
+        - 0x11: [D] or(regA, regB, regC)
+            regA = regB | regC
+        - 0x12: [C] not(regA, regB)
+            regA = ~regB
+        - 0x13: [D] xor(regA, regB, regC)
+            regA = regB ^ regC
+    program control / jumping
+        - 0x14: [C] jnz(regA, regB)
+            if regA != 0, ip = regB
+        - 0x15: [C] jz(regA, regB)
+            if regA == 0, ip = regB
+        - 0x16: [B] jmp(reg)
+            ip = regA
+        - 0x17: [B] link(reg)
+            push(next ip)
+            jmp(regA)
+        - 0x18: [A] ret
+            pop(ip)
+    stack operations
+        - 0x19: [B] push(reg)
+            memory[sp] = reg
+            sp -= 4
+        - 0x1A: [B] pop(reg)
+            sp += 4
+            reg = memory[sp]
+    halt
+        - 0x60 hlt
+            halts the system
+    system (only usable in system mode)
+        - 0x80: [system] sys(imm8)
+            interfaces with cpu internals using imm8 ID
+            sys interface is declared in the #system:interface section
+    interrupts
+        - 0xF0: [system] int(imm8)
+            issues interrupt based on the imm8 as interrupt ID
+            interrupts are explained more in #system:interrupts
+
+    example
+        c
+            uint32_t base = 6;
+            uint32_t result = base;
+            uint32_t power = 2;
+
+            while (power--) {
+                result *= base;
+            }
+
+        krisc32 asm
+            // init
+            ldi r0, 6
+            ldi r1, 2
+            ldr r2, 1
+            ldi r3, 1
+            ldi r14, label
+            ldi r15, 0
+
+            // loop
+            mul r2, r2, r0 // label
+            sub r1, r1, r3
+            jnz r1, r14
+            // done
+
+system
+    the interface between instruction set and CPU internals
+
+    interface (sys instruction operand)
+        input
+            inputs are stored in sys0-sys7 prior to the invocation of sys
+            sys registers are volatile and may be over written by the sys instruction
+
+        output
+            returns output in sys0-sys7 incrementally
+            one output = sys0 (will not be explicitly specified in the list)
+            two outputs = sys0, sys1
+            N outputs = sys0, ..., sysN-1
+
+        - 0x00: get boot address (where the boot started from)
+        - 0x01: get memory size
+        - 0x02: set interrupt vector address (see #system:interrupts:vector)
+        - 0x03: get current interrupt vector address
+        - 0x04: switch to/from usermode
+
+    interrupts
+        256 total interrupts
+        if an interrupt is issued in usermode, the CPU mode transitions to system mode prior to handling the interrupt and returns to usermode upon finishing
+        reserved
+            - 0x00: exceptions / faults (see #system:exceptions)
+        standardized (recommended to mask in user space)
+            - 0x01-0x10: hardware
+                0x01: keyboard
+                0x02: mouse
+                0x03: krisc graphics
+                0x04: disk
+                ...
+
+        vector
+            interrupts are handled via the interrupt vector table
+            each table entry holds a 32 bit address to an interrupt handler
+            by default this is at 0x00000000 to 0x00000400
+            this is relocatable via sys(0x02) with sys0 set to the address
+
+            entry
+                if an interrupt entry points to 0x00000000, the interrupt is ignored
+                if an entry points to invalid memory (memory mapped hardware or outside of memory bounds), an invalid memory exception (0x02) is invoked
+                if an exception occurs during interrupt or exception handling, the system halts
+                if the exception entry points to 0x00000000 or invalid memory, the system halts
+
+    exceptions (int 0x00)
+        exception type is stored in sys0
+        address causing exception is stored in sys1
+        - 0x00: divide by zero
+            CPU attempted to execute a division instruction with divisor equal to 0
+        - 0x01: invalid instruction
+            CPU decoded invalid instruction
+        - 0x02: invalid memory
+            CPU attempted to read/write at an invalid memory address
+            attempted address is stored in sys2
+        - 0x03: unpriviledged invocation
+            CPU attempted to execute system instruction or interrupt from usermode
+        - 0x04: unpriviledged memory
+            CPU attempted to access non usermode memory from usermode
+            attempted address is stored in sys2
+        - 0x05: stack overflow
+            stack pointer is decremented below 0x00000000
+        - 0x06: stack underflow
+            stack pointer is incremented above the maximum memory address
