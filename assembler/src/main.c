@@ -125,13 +125,17 @@ usize hash_word(word_t* word) {
 }
 
 s32 retrieve_word(char* buffer, usize size, word_t* word) {
+    if (buffer[0] == '\0') {
+        return 0;
+    }
+
     if (size == 0) {
         return 0;
     }
 
     usize end = 0;
     while (end < size && buffer[end] != '\0' && buffer[end] != ' ' && buffer[end] != '\t' && buffer[end] != '\n') {
-        end++;
+        ++end;
     }
 
     word->start = buffer;
@@ -213,11 +217,15 @@ s32 main(int argc, char** argv) {
         index += word.length + 1;
         s -= word.length + 1;
 
-        if (!process_word(&asm, &word)) {
+        if (s == 0) {
             break;
         }
 
-        if (s == 0) {
+        if (buffer[index] == '\0') {
+            break;
+        }
+
+        if (!process_word(&asm, &word)) {
             break;
         }
     }
