@@ -1,3 +1,8 @@
 .vscode/
+.vs/
 build/
+out/
 *.bak
+*.bin
+*.elf
+*.o

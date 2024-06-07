@@ -1,0 +1,1 @@
+k32-emu test.bin --print-status

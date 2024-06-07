@@ -1,0 +1,1 @@
+k32-as test.asm /Fo test.o && k32-ld test.o /Fo test.bin /B 0x00000000

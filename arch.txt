@@ -58,19 +58,19 @@ instructions
             reg = imm32
         - 0x02: [C] ldr(regA, regB)
             regA = regB
-        - 0x03: [E] ldm8(reg, addr)
-            reg = memory[addr] (1 byte)
-        - 0x04: [E] ldm16(reg, addr)
-            reg = memory[addr] (2 bytes)
-        - 0x05: [E] ldm32(reg, addr)
-            reg = memory[addr] (4 bytes)
+        - 0x03: [C] ldm8(regA, regB)
+            regA = memory[regB] (1 byte)
+        - 0x04: [C] ldm16(regA, regB)
+            regA = memory[regB] (2 bytes)
+        - 0x05: [C] ldm32(regA, regB)
+            regA = memory[regB] (4 bytes)
     storing
-        - 0x06: [E] str8(reg, addr)
-            memory[addr] = reg (lowest byte)
-        - 0x07: [E] str16(reg, addr)
-            memory[addr] = reg (lowest 2 bytes)
-        - 0x08: [E] str32(reg, addr)
-            memory[addr] = reg (whole 4 bytes)
+        - 0x06: [C] str8(regA, regB)
+            memory[regA] = regB (lowest byte)
+        - 0x07: [C] str16(regA, regB)
+            memory[regA] = regB (lowest 2 bytes)
+        - 0x08: [C] str32(regA, regB)
+            memory[regA] = regB (whole 4 bytes)
     arithmetic
         - 0x09: [D] add(regA, regB, regC)
             regA = regB + regC
@@ -156,7 +156,7 @@ system
 
     interface (sys instruction operand)
         input
-            inputs are stored in sys0-sys7 prior to the invocation of sys
+            inputs are stored in sys0-sys7, with the first parameter stored in sys0 and the eighth stored in sys7, prior to the invocation of sys
             sys registers are volatile and may be over written by the sys instruction
 
         output
@@ -167,13 +167,11 @@ system
 
         - 0x00: get boot address (where the boot started from)
         - 0x01: get memory size
-        - 0x02: set interrupt vector address (see #system:interrupts:vector)
-        - 0x03: get current interrupt vector address
+        - 0x02: set interrupt handler address (see #system:interrupts:handler)
+        - 0x03: get current interrupt handler address
         - 0x04: switch to/from usermode
 
     interrupts
-        256 total interrupts
-        if an interrupt is issued in usermode, the CPU mode transitions to system mode prior to handling the interrupt and returns to usermode upon finishing
         reserved
             - 0x00: exceptions / faults (see #system:exceptions)
         standardized (recommended to mask in user space)
@@ -184,21 +182,15 @@ system
                 0x04: disk
                 ...
 
-        vector
-            interrupts are handled via the interrupt vector table
-            each table entry holds a 32 bit address to an interrupt handler
-            by default this is at 0x00000000 to 0x00000400
-            this is relocatable via sys(0x02) with sys0 set to the address
-
-            entry
-                if an interrupt entry points to 0x00000000, the interrupt is ignored
-                if an entry points to invalid memory (memory mapped hardware or outside of memory bounds), an invalid memory exception (0x02) is invoked
-                if an exception occurs during interrupt or exception handling, the system halts
-                if the exception entry points to 0x00000000 or invalid memory, the system halts
+        handler
+            interrupts are handled via the interrupt handler
+            if interrupt handler is not a valid address, interrupts are ignored, but exceptions are fatal
+            if an interrupt handler triggers an exception, the system will halt
+            there is no default interrupt handler, it must be set before utilizing interrupts and exceptions
+                any issued interrupts and exceptions are treated as if the handler is invalid (interrupts are ignored, exceptions are fatal)
 
     exceptions (int 0x00)
-        exception type is stored in sys0
-        address causing exception is stored in sys1
+        exception type is stored in sys7
         - 0x00: divide by zero
             CPU attempted to execute a division instruction with divisor equal to 0
         - 0x01: invalid instruction
