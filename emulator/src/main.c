@@ -79,14 +79,19 @@ u32* get_register(cpu_t* cpu, u8 reg);
 void print_next_instruction(cpu_t* cpu);
 
 s32 main(s32 argc, char** argv) {
+	s32 print_status = 0;
+	char* rom_file = NULL;
+
+	#ifdef DEBUG_FIXED_FILES
+	rom_file = "../../../../test/test.bin";
+	print_status = 1;
+	#else
 	if (argc < 2) {
 		printf("Usage: %s <rom file> [options]\n", argv[0]);
 		printf("Flags:\n  [-p, --print-status] [/Ps] Print the status of the processor after each instruction\n");
 		return 1;
 	}
 
-	s32 print_status = 0;
-	char* rom_file = NULL;
 	for (s32 i = 1; i < argc; ++i) {
 		if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--print-status") == 0 || strcmp(argv[i], "/Ps") == 0) {
 			print_status = 1;
@@ -97,6 +102,7 @@ s32 main(s32 argc, char** argv) {
 			return 1;
 		}
 	}
+	#endif
 
 	if (rom_file == NULL) {
 		printf("No ROM file specified\n");
@@ -155,7 +161,7 @@ s32 main(s32 argc, char** argv) {
 				}
 				printf("r%u: %s0x%08x    ", i, (i >= 10) ? "" : " ", cpu.regs.gp.r[i]);
 			}
-	
+
 			printf("\n[ip: 0x%08x]  ", cpu.regs.protected.ip);
 			printf("sp: 0x%08x\n", cpu.regs.gp.sp);
 			printf("mode:              %s\n", cpu.mode == CPU_MODE_SYSTEM ? "system" : " user");
@@ -924,49 +930,56 @@ char* ldi_string(instruction_t* inst, cpu_t* cpu) {
 char* ldr_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
-	sprintf(instruction_string_buffer, "%s %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
 char* ldm8_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
-	sprintf(instruction_string_buffer, "%s %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
 char* ldm16_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
-	sprintf(instruction_string_buffer, "%s %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
 char* ldm32_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
-	sprintf(instruction_string_buffer, "%s %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
 char* str8_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
-	sprintf(instruction_string_buffer, "%s %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
 char* str16_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
-	sprintf(instruction_string_buffer, "%s %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
 char* str32_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
-	sprintf(instruction_string_buffer, "%s %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
@@ -974,7 +987,9 @@ char* add_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
 	u8 reg_c = cpu->memory.data[cpu->regs.protected.ip + 2];
-	sprintf(instruction_string_buffer, "%s %s, %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b), reg_as_string(cpu, reg_c));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	len += sprintf(&instruction_string_buffer[len], "%s, ", reg_as_string(cpu, reg_b));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_c));
 	return instruction_string_buffer;
 }
 
@@ -982,7 +997,9 @@ char* sub_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
 	u8 reg_c = cpu->memory.data[cpu->regs.protected.ip + 2];
-	sprintf(instruction_string_buffer, "%s %s, %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b), reg_as_string(cpu, reg_c));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	len += sprintf(&instruction_string_buffer[len], "%s, ", reg_as_string(cpu, reg_b));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_c));
 	return instruction_string_buffer;
 }
 
@@ -990,7 +1007,9 @@ char* mul_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
 	u8 reg_c = cpu->memory.data[cpu->regs.protected.ip + 2];
-	sprintf(instruction_string_buffer, "%s %s, %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b), reg_as_string(cpu, reg_c));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	len += sprintf(&instruction_string_buffer[len], "%s, ", reg_as_string(cpu, reg_b));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
@@ -998,7 +1017,9 @@ char* div_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
 	u8 reg_c = cpu->memory.data[cpu->regs.protected.ip + 2];
-	sprintf(instruction_string_buffer, "%s %s, %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b), reg_as_string(cpu, reg_c));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	len += sprintf(&instruction_string_buffer[len], "%s, ", reg_as_string(cpu, reg_b));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
@@ -1006,7 +1027,9 @@ char* rem_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
 	u8 reg_c = cpu->memory.data[cpu->regs.protected.ip + 2];
-	sprintf(instruction_string_buffer, "%s %s, %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b), reg_as_string(cpu, reg_c));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	len += sprintf(&instruction_string_buffer[len], "%s, ", reg_as_string(cpu, reg_b));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
@@ -1014,7 +1037,9 @@ char* shr_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
 	u8 reg_c = cpu->memory.data[cpu->regs.protected.ip + 2];
-	sprintf(instruction_string_buffer, "%s %s, %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b), reg_as_string(cpu, reg_c));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	len += sprintf(&instruction_string_buffer[len], "%s, ", reg_as_string(cpu, reg_b));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
@@ -1022,7 +1047,9 @@ char* shl_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
 	u8 reg_c = cpu->memory.data[cpu->regs.protected.ip + 2];
-	sprintf(instruction_string_buffer, "%s %s, %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b), reg_as_string(cpu, reg_c));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	len += sprintf(&instruction_string_buffer[len], "%s, ", reg_as_string(cpu, reg_b));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
@@ -1030,7 +1057,9 @@ char* and_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
 	u8 reg_c = cpu->memory.data[cpu->regs.protected.ip + 2];
-	sprintf(instruction_string_buffer, "%s %s, %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b), reg_as_string(cpu, reg_c));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	len += sprintf(&instruction_string_buffer[len], "%s, ", reg_as_string(cpu, reg_b));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
@@ -1038,14 +1067,17 @@ char* or_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
 	u8 reg_c = cpu->memory.data[cpu->regs.protected.ip + 2];
-	sprintf(instruction_string_buffer, "%s %s, %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b), reg_as_string(cpu, reg_c));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	len += sprintf(&instruction_string_buffer[len], "%s, ", reg_as_string(cpu, reg_b));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
 char* not_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
-	sprintf(instruction_string_buffer, "%s %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
@@ -1053,27 +1085,31 @@ char* xor_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
 	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
 	u8 reg_c = cpu->memory.data[cpu->regs.protected.ip + 2];
-	sprintf(instruction_string_buffer, "%s %s, %s, %s", inst->name, reg_as_string(cpu, reg_a), reg_as_string(cpu, reg_b), reg_as_string(cpu, reg_c));
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	len += sprintf(&instruction_string_buffer[len], "%s, ", reg_as_string(cpu, reg_b));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
 char* jnz_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
-	u32 address = FETCH_U32(cpu->memory.data, cpu->regs.protected.ip + 1);
-	sprintf(instruction_string_buffer, "%s %s, 0x%08x", inst->name, reg_as_string(cpu, reg_a), address);
+	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
 char* jz_string(instruction_t* inst, cpu_t* cpu) {
 	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
-	u32 address = FETCH_U32(cpu->memory.data, cpu->regs.protected.ip + 1);
-	sprintf(instruction_string_buffer, "%s %s, 0x%08x", inst->name, reg_as_string(cpu, reg_a), address);
+	u8 reg_b = cpu->memory.data[cpu->regs.protected.ip + 1];
+	int len = sprintf(instruction_string_buffer, "%s %s, ", inst->name, reg_as_string(cpu, reg_a));
+	sprintf(&instruction_string_buffer[len], "%s", reg_as_string(cpu, reg_b));
 	return instruction_string_buffer;
 }
 
 char* jmp_string(instruction_t* inst, cpu_t* cpu) {
-	u8 reg = cpu->memory.data[cpu->regs.protected.ip];
-	sprintf(instruction_string_buffer, "%s %s", inst->name, reg_as_string(cpu, reg));
+	u8 reg_a = cpu->memory.data[cpu->regs.protected.ip];
+	sprintf(instruction_string_buffer, "%s, %s", inst->name, reg_as_string(cpu, reg_a));
 	return instruction_string_buffer;
 }
 

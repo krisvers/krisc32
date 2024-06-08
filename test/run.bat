@@ -1,1 +1,1 @@
-k32-emu test.bin
+>output.txt (k32-emu test.bin --print-status)
