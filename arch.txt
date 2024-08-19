@@ -2,7 +2,7 @@ arch
     little endian
     32 bit address space
     32 bit registers
-    RISC
+    RISC-y
 
     2 modes
         system mode (default)
@@ -203,7 +203,5 @@ system
         - 0x04: unpriviledged memory
             CPU attempted to access non usermode memory from usermode
             attempted address is stored in sys2
-        - 0x05: stack overflow
-            stack pointer is decremented below 0x00000000
-        - 0x06: stack underflow
-            stack pointer is incremented above the maximum memory address
+	- 0x05: stack overflow
+	- 0x06: stack underflow

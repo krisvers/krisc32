@@ -1,1 +1,1 @@
-k32-emu test.bin --print-status
+k32-emu test.bin

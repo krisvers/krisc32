@@ -219,62 +219,6 @@ usize hash_word(word_t* word) {
 	return hash;
 }
 
-void print_lines(assembler_t* assembler) {
-	for (usize i = 0; i < assembler->line_count; ++i) {
-		line_t line = assembler->lines[i];
-		switch (line.define_type) {
-			case DEFINE_TYPE_8:
-				printf("Line %zu: define byte 0x%02x\n", i, line.def8);
-				continue;
-			case DEFINE_TYPE_16:
-				printf("Line %zu: define word 0x%04x\n", i, line.def16);
-				continue;
-			case DEFINE_TYPE_32:
-				printf("Line %zu: define dword 0x%08x\n", i, line.def32);
-				continue;
-			case DEFINE_TYPE_64:
-				printf("Line %zu: define qword 0x%08x%08x\n", i, (u32) (line.def64 >> 32), (u32) (line.def64 & 0xFFFFFFFF));
-				continue;
-			default:
-				break;
-		}
-
-		printf("Line %zu: '%s' at local address 0x%08x with %u / %u operands\n", i, line.instruction->name, line.address, line.current_count, line.instruction->operand_count);
-		for (usize j = 0; j < line.instruction->operand_count; ++j) {
-			switch (line.instruction->type) {
-				case INSTRUCTION_TYPE_NO_OPERAND:
-					break;
-				case INSTRUCTION_TYPE_1_REGISTER:
-				case INSTRUCTION_TYPE_2_REGISTER:
-				case INSTRUCTION_TYPE_3_REGISTER:
-					printf("Operand %zu: register '%s'\n", j, line.operands[j].reg->name);
-					break;
-				case INSTRUCTION_TYPE_1_REGISTER_1_IMMEDIATE:
-					if (j == 0) {
-						printf("Operand %zu: register '%s'\n", j, line.operands[j].reg->name);
-					} else {
-						if (line.operands[j].is_label) {
-							printf("Operand %zu: label '%s'\n", j, word_cstring(&line.operands[j].word));
-						} else {
-							printf("Operand %zu: immediate 0x%08x\n", j, line.operands[j].immediate);
-						}
-					}
-					break;
-				case INSTRUCTION_TYPE_SYSTEM:
-					printf("Operand %zu: immediate 0x%02x\n", j, line.operands[j].imm8);
-					break;
-			}
-		}
-	}
-}
-
-void print_labels(assembler_t* assembler) {
-	for (usize i = 0; i < assembler->label_count; ++i) {
-		label_t label = assembler->labels[i];
-		printf("Label %zu: '%s' at address 0x%08x\n", i, word_cstring(&label.name), label.address);
-	}
-}
-
 s32 retrieve_word(char* buffer, usize size, word_t* word) {
 	if (buffer[0] == '\0') {
 		return 0;
@@ -498,7 +442,6 @@ s32 process_word(assembler_t* assembler, word_t* word) {
 	usize hash = hash_word(word);
 	for (u16 i = 0; i < sizeof(instructions) / sizeof(instruction_t); ++i) {
 		if (instructions[i].hash == hash) {
-			printf("Found instruction '%s'\n", instructions[i].name);
 			line.section = assembler->current_section;
 			if (line.define_type == DEFINE_TYPE_NONE && line.instruction != NULL && line.current_count == line.instruction->operand_count) {
 				assembler->current_address += instruction_types[line.instruction->type].operand_size + 1;
@@ -1475,12 +1418,6 @@ s32 main(int argc, char** argv) {
 			}
 		}
 
-		printf("hello world [%zu] (%s)     ", word.length, word_cstring(&word));
-		for (usize i = 0; i < word.length; ++i) {
-			printf("{0x%02x} ", word.start[i]);
-		}
-		printf("\n");
-
 		index += word.length + 1;
 		s -= word.length + 1;
 
@@ -1508,9 +1445,6 @@ s32 main(int argc, char** argv) {
 			break;
 		}
 	}
-
-	print_lines(&assembler);
-	print_labels(&assembler);
 
 	if (!evaluate_labels(&assembler)) {
 		return 0;
