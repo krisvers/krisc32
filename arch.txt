@@ -48,6 +48,10 @@ instruction types and sizes
         1 byte register identifier
         4 byte address / immediate
 
+    - [F]: instruction with address / imm32 operand = 40 bits / 5 bytes
+        1 byte opcode
+        4 byte address / immediate
+
     - [system]: instruction with imm8 operand = 16 bits / 2 bytes
         1 byte opcode
         1 byte immediate
@@ -107,6 +111,13 @@ instructions
             jmp(regA)
         - 0x18: [A] ret
             pop(ip)
+
+        - 0x40: [E] jnzi(reg, addr)
+            if reg != 0, ip = addr
+        - 0x41: [E] jzi(reg, addr)
+            if reg == 0, ip = addr
+        - 0x42: [F] jmpi(addr)
+            ip = addr
     stack operations
         - 0x19: [B] push(reg)
             memory[sp] = reg
@@ -167,8 +178,8 @@ system
 
         - 0x00: get boot address (where the boot started from)
         - 0x01: get memory size
-        - 0x02: set interrupt handler address (see #system:interrupts:handler)
-        - 0x03: get current interrupt handler address
+        - 0x02: get current interrupt handler address
+        - 0x03: set interrupt handler address (see #system:interrupts:handler)
         - 0x04: switch to/from usermode
 
     interrupts
@@ -203,5 +214,5 @@ system
         - 0x04: unpriviledged memory
             CPU attempted to access non usermode memory from usermode
             attempted address is stored in sys2
-	- 0x05: stack overflow
-	- 0x06: stack underflow
+        - 0x05: stack overflow
+        - 0x06: stack underflow

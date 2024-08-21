@@ -37,7 +37,8 @@ typedef enum {
 	INSTRUCTION_TYPE_2_REGISTER = 2,
 	INSTRUCTION_TYPE_3_REGISTER = 3,
 	INSTRUCTION_TYPE_1_REGISTER_1_IMMEDIATE = 4,
-	INSTRUCTION_TYPE_SYSTEM = 5,
+	INSTRUCTION_TYPE_1_IMMEDIATE = 5,
+	INSTRUCTION_TYPE_SYSTEM = 6,
 	INSTRUCTION_TYPE_COUNT,
 } instruction_type_t;
 
@@ -47,6 +48,7 @@ instruction_type_info_t instruction_types[INSTRUCTION_TYPE_COUNT] = {
 	[INSTRUCTION_TYPE_2_REGISTER] = {.operand_types = { OPERAND_TYPE_REGISTER, OPERAND_TYPE_REGISTER, OPERAND_TYPE_NONE }, .operand_size = 2 },
 	[INSTRUCTION_TYPE_3_REGISTER] = {.operand_types = { OPERAND_TYPE_REGISTER, OPERAND_TYPE_REGISTER, OPERAND_TYPE_REGISTER, }, .operand_size = 3 },
 	[INSTRUCTION_TYPE_1_REGISTER_1_IMMEDIATE] = {.operand_types = { OPERAND_TYPE_REGISTER, OPERAND_TYPE_IMMEDIATE, OPERAND_TYPE_NONE }, .operand_size = 5 },
+	[INSTRUCTION_TYPE_1_IMMEDIATE] = {.operand_types = { OPERAND_TYPE_IMMEDIATE, OPERAND_TYPE_NONE }, .operand_size = 4 },
 	[INSTRUCTION_TYPE_SYSTEM] = {.operand_types = { OPERAND_TYPE_IMM8, OPERAND_TYPE_NONE }, .operand_size = 1 },
 };
 
@@ -81,6 +83,9 @@ instruction_t instructions[] = {
 	{.name = "jnz", .type = INSTRUCTION_TYPE_2_REGISTER, .operand_count = 2, .opcode = 0x14 },
 	{.name = "jz", .type = INSTRUCTION_TYPE_2_REGISTER, .operand_count = 2, .opcode = 0x15 },
 	{.name = "jmp", .type = INSTRUCTION_TYPE_1_REGISTER, .operand_count = 1, .opcode = 0x16 },
+	{.name = "jnzi", .type = INSTRUCTION_TYPE_1_REGISTER_1_IMMEDIATE, .operand_count = 2, .opcode = 0x40 },
+	{.name = "jzi", .type = INSTRUCTION_TYPE_1_REGISTER_1_IMMEDIATE, .operand_count = 2, .opcode = 0x41 },
+	{.name = "jmpi", .type = INSTRUCTION_TYPE_1_IMMEDIATE, .operand_count = 1, .opcode = 0x42 },
 	{.name = "link", .type = INSTRUCTION_TYPE_1_REGISTER, .operand_count = 1, .opcode = 0x17 },
 	{.name = "ret", .type = INSTRUCTION_TYPE_NO_OPERAND, .operand_count = 0, .opcode = 0x18 },
 	{.name = "push", .type = INSTRUCTION_TYPE_1_REGISTER, .operand_count = 1, .opcode = 0x19 },
@@ -282,7 +287,12 @@ s32 process_word(assembler_t* assembler, word_t* word) {
 		usize hash = hash_word(word);
 		u32 offset = 0;
 		if (assembler->line_count != 0) {
-			offset = instruction_types[assembler->lines[assembler->line_count - 1].instruction->type].operand_size + 1;
+            line_t* line = &assembler->lines[assembler->line_count - 1];
+            if (line->define_type == DEFINE_TYPE_NONE) {
+                offset = instruction_types[line->instruction->type].operand_size + 1;
+            } else {
+                offset = (line->define_type == DEFINE_TYPE_64) ? 8 : (line->define_type == DEFINE_TYPE_32) ? 4 : (line->define_type == DEFINE_TYPE_16) ? 2 : 1;
+            }
 		}
 
 		label_t label = { .name = *word, .hash = hash, .address = assembler->current_address + offset, .section = assembler->current_section };
@@ -492,7 +502,7 @@ s32 process_word(assembler_t* assembler, word_t* word) {
 	}
 
 	if (line.current_count >= line.instruction->operand_count) {
-		printf("Instruction '%s' already has %u operands; unexpected sequence '%s'\n", line.instruction->name, line.instruction->operand_count, word_cstring(word));
+        printf("Instruction '%s' already has %u operands; unexpected sequence '%s' (line %zu)\n", line.instruction->name, line.instruction->operand_count, word_cstring(word), assembler->line_count);
 		return 0;
 	}
 
@@ -532,7 +542,9 @@ s32 process_word(assembler_t* assembler, word_t* word) {
 			} else {
 				if (is_alpha(word->start[0])) {
 					operand.is_label = 1;
-				} else {
+				} else if (word->start[0] == '\'' && word->start[word->length - 1] == '\'' && word->length == 3) {
+                    operand.immediate = word->start[1];
+                } else {
 					u32(*char_to_u32)(char) = decchar_to_u32;
 					u32 radix = 10;
 					u32 start = 0;
@@ -549,6 +561,25 @@ s32 process_word(assembler_t* assembler, word_t* word) {
 				}
 			}
 			break;
+        case INSTRUCTION_TYPE_1_IMMEDIATE:
+            if (is_alpha(word->start[0])) {
+				operand.is_label = 1;
+			} else {
+				u32(*char_to_u32)(char) = decchar_to_u32;
+				u32 radix = 10;
+				u32 start = 0;
+				if (word->length > 2 && word->start[0] == '0' && word->start[1] == 'x') {
+					char_to_u32 = hexchar_to_u32;
+					radix = 16;
+					start = 2;
+				}
+
+				operand.immediate = 0;
+				for (usize i = start; i < word->length; ++i) {
+					operand.immediate = (operand.immediate * radix) + char_to_u32(word->start[i]);
+				}
+			}
+            break;
 		case INSTRUCTION_TYPE_SYSTEM: {
 			u32(*char_to_u32)(char) = decchar_to_u32;
 			u32 radix = 10;
@@ -1161,6 +1192,20 @@ s32 codegen_obj(assembler_t* assembler, FILE* outfp) {
 					}
 					current_offset += 5;
 					break;
+                case INSTRUCTION_TYPE_1_IMMEDIATE:
+					if (line.operands[0].is_label) {
+						if (write_buffer(&line.operands[0].label->address, 4, 1, &buffer) != 1) {
+							printf("Failed to write label address\n");
+							return 0;
+						}
+					} else {
+						if (write_buffer(&line.operands[0].immediate, 4, 1, &buffer) != 1) {
+							printf("Failed to write immediate\n");
+							return 0;
+						}
+					}
+                    current_offset += 4;
+                    break;
 				case INSTRUCTION_TYPE_SYSTEM:
 					if (write_buffer(&line.operands[0].imm8, 1, 1, &buffer) != 1) {
 						printf("Failed to write imm8\n");
@@ -1421,20 +1466,20 @@ s32 main(int argc, char** argv) {
 		index += word.length + 1;
 		s -= word.length + 1;
 
-		if (index >= size) {
-			break;
-		}
-
-		if (s == 0) {
-			break;
-		}
-
 		if (word.start[word.length - 1] == ',') {
 			--word.length;
 		}
 
 		if (!process_word(&assembler, &word)) {
 			return 0;
+		}
+
+	    if (index >= size) {
+			break;
+		}
+
+		if (s == 0) {
+			break;
 		}
 
 		if (index + word.length >= size) {
