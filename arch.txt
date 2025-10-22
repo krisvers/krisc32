@@ -153,14 +153,12 @@ instructions
             ldi r1, 2
             ldr r2, 1
             ldi r3, 1
-            ldi r14, label
             ldi r15, 0
 
-            // loop
-            mul r2, r2, r0 // label
-            sub r1, r1, r3
-            jnz r1, r14
-            // done
+            loop:
+                mul r2, r2, r0
+                sub r1, r1, r3
+                jnzi r1, loop
 
 system
     the interface between instruction set and CPU internals
@@ -181,6 +179,7 @@ system
         - 0x02: get current interrupt handler address
         - 0x03: set interrupt handler address (see #system:interrupts:handler)
         - 0x04: switch to/from usermode
+        - 0x05: set page table address with sys0 = address (see #system:paging)
 
     interrupts
         reserved
@@ -216,3 +215,16 @@ system
             attempted address is stored in sys2
         - 0x05: stack overflow
         - 0x06: stack underflow
+
+devices
+    mapped memory starts at 0xF0000000
+
+    device maps
+        [0xF0000000 - 0xF0050000] reserved for graphics framebuffer
+        [0xF0050000 - 0xF0050010] graphics info
+            [0xF0050000 - 0xF0050002] framebuffer width
+            [0xF0050002 - 0xF0050004] framebuffer height
+        [0xF0060000 - 0xF0060002] keyboard input (interrupt 0x01)
+            [0xF0060000] scancode
+            [0xF0060001] state (was pressed, was released
+

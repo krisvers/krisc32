@@ -5,7 +5,26 @@ start:
     ldi sys0, handler
     sys 0x03
 
+    ldi r8, 0xFF
+    ldi r9, 119
+    ldi r10, 45
+    ldi r11, 1
+    ldi r12, 7
+    ldi r14, 320
+    ldi r15, 200
+
+    ldi r0, putpixel
+
     loop:
+        add r9, r9, r12
+        add r10, r10, r11
+        add r8, r8, r11
+
+        rem r9, r9, r14
+        add r9, r9, r10
+        rem r10, r10, r15
+        
+        link r0
         jmpi loop
 
     exit:
@@ -17,11 +36,14 @@ putpixel:
     push r14
     push r10
 
+    /* setup framebuffer address */
     ldi r15, 0xF0000000
     add r15, r15, r9
 
-    ldi r14, 120
-    mul r10, r10, r14
+    /* get width */
+    ldi r14, 0xF0050000
+    ldm16 r13, r14
+    mul r10, r10, r13
 
     add r15, r15, r10
     str8 r15, r8
@@ -32,75 +54,4 @@ putpixel:
     ret
 
 handler:
-    ldi r0, putpixel
-
-    ldi r15, color
-    ldm8 r8, r15
-
-    ldi r15, pos_x
-    ldm8 r9, r15
-
-    ldi r15, pos_y
-    ldm8 r10, r15
-
-    ldi r15, 0xFF000000
-    ldm8 r1, r15
-
-    ldi r3, 0x01
-    add r15, r15, r3
-    ldm8 r2, r15
-
-    jnzi r2, keydown
     ret
-
-    keydown:
-
-    ldi r4, 0x89
-    sub r4, r1, r4
-    jnzi r4, handler_skip_up
-
-        sub r10, r10, r3
-
-    handler_skip_up:
-
-    ldi r4, 0x88
-    sub r4, r1, r4
-    jnzi r4, handler_skip_down
-
-        add r10, r10, r3
-
-    handler_skip_down:
-
-    ldi r4, 0x87
-    sub r4, r1, r4
-    jnzi r4, handler_skip_left
-
-        sub r9, r9, r3
-
-    handler_skip_left:
-
-    ldi r4, 0x86
-    sub r4, r1, r4
-    jnzi r4, handler_done
-
-        add r9, r9, r3
-
-    handler_done:
-        ldi r15, color
-        str8 r15, r8
-
-        ldi r15, pos_y
-        str8 r15, r10
-        
-        ldi r15, pos_x
-        str8 r15, r9
-
-        link r0
-        ret
-
-pos_x:
-    =0x00
-pos_y:
-    =0x00
-color:
-    =0xE3

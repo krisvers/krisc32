@@ -88,13 +88,15 @@ typedef enum {
 #define MEMORY_SIZE 0x00001000
 #define BOOT_VECTOR 0x00000000
 
-#define GRAPHICAL_WIDTH 120
-#define GRAPHICAL_HEIGHT 80
+#define GRAPHICAL_WIDTH 320
+#define GRAPHICAL_HEIGHT 200
 #define GRAPHICAL_VECTOR 0xF0000000
 #define GRAPHICAL_SIZE GRAPHICAL_WIDTH * GRAPHICAL_HEIGHT
-#define GRAPHICAL_SCALE 6
+#define GRAPHICAL_SCALE 3
+#define GRAPHICAL_WIDTH_VECTOR 0xF0050000
+#define GRAPHICAL_HEIGHT_VECTOR 0xF0050002
 
-#define KEYINPUT_VECTOR 0xFF000000
+#define KEYINPUT_VECTOR 0xF0060000
 #define KEYINPUT_SIZE 0x02
 
 #define KEYINTERRUPT 0x01
@@ -519,6 +521,11 @@ s32 handle_ldm8(cpu_t* cpu) {
         return 1;
     }
     
+    if (cpu->graphical.window != NULL && *r_b >= GRAPHICAL_WIDTH_VECTOR && *r_b < GRAPHICAL_WIDTH_VECTOR + 2) {
+        *r_a = GRAPHICAL_WIDTH & 0xFF;
+        return 1;
+    }
+    
     if (*r_b >= KEYINPUT_VECTOR && *r_b < KEYINPUT_VECTOR + KEYINPUT_SIZE) {
         if (*r_b == KEYINPUT_VECTOR) {
             *r_a = cpu->mapped.keystate.scancode;
@@ -570,6 +577,11 @@ s32 handle_ldm16(cpu_t* cpu) {
         
         u8 byte2 = graphical_getpixel(cpu, x, y);
         *r_a = byte1 | (byte2 << 8);
+        return 1;
+    }
+    
+    if (cpu->graphical.window != NULL && *r_b >= GRAPHICAL_WIDTH_VECTOR && *r_b < GRAPHICAL_WIDTH_VECTOR + 2) {
+        *r_a = GRAPHICAL_WIDTH;
         return 1;
     }
     
